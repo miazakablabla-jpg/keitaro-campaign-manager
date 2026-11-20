@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from app.api.routes import router
 from app.keitaro import KeitaroError
 from app.services.editor import EditorError, NotFound
+from app.services.stats import StatsError
 from app.services.weights import WeightsError
 
 STATIC = Path(__file__).parent / "static"
@@ -23,6 +24,7 @@ def index():
 
 @app.exception_handler(EditorError)
 @app.exception_handler(WeightsError)
+@app.exception_handler(StatsError)
 def _bad_request(_: Request, exc: Exception):
     return JSONResponse(status_code=400, content={"detail": str(exc)})
 

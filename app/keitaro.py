@@ -93,6 +93,18 @@ class KeitaroClient:
     def update_stream(self, stream_id: int, body: dict) -> dict:
         return self._request("PUT", f"streams/{stream_id}", json=body)
 
+    # --- отчёты ---------------------------------------------------------
+    def build_report(self, body: dict) -> dict:
+        """POST /report/build. В спецификации поле метрик то «measures», то «metrics» —
+        отправляем «measures», а при 400 повторяем с «metrics»."""
+        try:
+            return self._request("POST", "report/build", json=body)
+        except KeitaroError as exc:
+            if exc.status_code != 400 or "measures" not in body:
+                raise
+            alt = {k: v for k, v in body.items() if k != "measures"} | {"metrics": body["measures"]}
+            return self._request("POST", "report/build", json=alt)
+
 
 def _error_text(payload: Any) -> str:
     if isinstance(payload, dict):

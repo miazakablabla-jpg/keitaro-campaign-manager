@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     geo_redirect_url: str = "https://google.com"
     # Сколько секунд держать в памяти список офферов для автокомплита
     offers_cache_ttl: int = 60
+    # Часовой пояс отчётов; пусто — часовой пояс, настроенный в самом трекере
+    report_timezone: str = ""
 
 
 @lru_cache

@@ -6,8 +6,10 @@
 """
 
 import copy
+import hashlib
 import os
-from datetime import datetime, timezone
+import random
+from datetime import date, datetime, timedelta, timezone
 from itertools import count
 
 from fastapi import APIRouter, Depends, FastAPI, Header, HTTPException, Request
@@ -17,6 +19,10 @@ API_KEY = os.environ.get("FAKE_KEITARO_KEY", "fake-key")
 
 def _now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _days_ago(n: int) -> str:
+    return (datetime.now(timezone.utc) - timedelta(days=n)).strftime("%Y-%m-%d %H:%M:%S")
 
 
 class Store:
@@ -59,11 +65,13 @@ class Store:
             "created_at": _now(), "updated_at": _now(),
         }
         self._make_stream({
+            "_created_at": _days_ago(45),
             "campaign_id": cid, "type": "regular", "name": "Flow 1", "position": 1, "schema": "redirect",
             "action_type": "http", "action_payload": "https://google.com",
             "filters": [{"name": "country", "mode": "accept", "payload": ["AU"]}],
         })
         self._make_stream({
+            "_created_at": _days_ago(45),
             "campaign_id": cid, "type": "regular", "name": "Flow 2", "position": 2, "schema": "landings",
             "action_type": "http",
             "offers": [
@@ -84,7 +92,7 @@ class Store:
             "state": body.get("state", "active"), "action_type": body.get("action_type", "http"),
             "action_payload": body.get("action_payload"), "schema": body.get("schema", "landings"),
             "filters": [], "landings": [], "offers": [], "triggers": [],
-            "created_at": _now(), "updated_at": _now(),
+            "created_at": body.get("_created_at") or _now(), "updated_at": _now(),
         }
         self.streams[sid] = stream
         self._apply_stream(stream, body)
@@ -234,6 +242,108 @@ def delete_stream(stream_id: int):
     s = _get(store.streams, stream_id, "Stream")
     s["state"] = "deleted"
     return s
+
+
+# --- отчёты: синтетическая, но стабильная статистика -----------------------
+MEASURE_MAP = {
+    "clicks": "clicks",
+    "campaign_unique_clicks": "unique",
+    "bots": "bots",
+    "conversions": "conversions",
+    "revenue": "revenue",
+}
+
+
+def _rng(*parts) -> random.Random:
+    seed = int(hashlib.md5(":".join(map(str, parts)).encode()).hexdigest()[:8], 16)
+    return random.Random(seed)
+
+
+def _range_days(rng: dict) -> list[date]:
+    today = date.today()
+    interval = rng.get("interval")
+    if rng.get("from") and rng.get("to"):
+        start, end = date.fromisoformat(rng["from"][:10]), date.fromisoformat(rng["to"][:10])
+    elif interval == "yesterday":
+        start = end = today - timedelta(days=1)
+    elif interval == "7_days_ago":
+        start, end = today - timedelta(days=6), today
+    elif interval == "1_month_ago":
+        start, end = today - timedelta(days=29), today
+    elif interval == "first_day_of_this_month":
+        start, end = today.replace(day=1), today
+    elif interval == "all_time":
+        start, end = today - timedelta(days=59), today
+    else:
+        start = end = today
+    return [start + timedelta(days=i) for i in range((end - start).days + 1)]
+
+
+def _split(total: int, shares: list[int]) -> list[int]:
+    s = sum(shares) or 1
+    raw = [total * sh / s for sh in shares]
+    out = [int(x) for x in raw]
+    for i in sorted(range(len(raw)), key=lambda i: raw[i] - out[i], reverse=True)[: total - sum(out)]:
+        out[i] += 1
+    return out
+
+
+def _click_rows(campaign_id: int, days: list[date]) -> list[dict]:
+    now = datetime.now()
+    day_part = (now.hour * 60 + now.minute) / 1440
+    rows = []
+    for s in store.streams.values():
+        if s["campaign_id"] != campaign_id or s["state"] == "deleted":
+            continue
+        offers = [o for o in s["offers"] if o.get("state", "active") == "active"]
+        born = date.fromisoformat(s["created_at"][:10])
+        for d in days:
+            if d < born:
+                continue
+            r = _rng("stream", s["id"], d.isoformat())
+            base = r.randint(60, 240) if offers else r.randint(8, 50)
+            clicks = int(base * (0.85 if d.weekday() >= 5 else 1.0))
+            if d == now.date():
+                clicks = int(clicks * max(day_part, 0.05))
+            parts = _split(clicks, [o["share"] for o in offers]) if offers else [clicks]
+            targets = offers or [None]
+            for o, c in zip(targets, parts):
+                oid = o["offer_id"] if o else 0
+                ro = _rng("offer", s["id"], oid, d.isoformat())
+                cr = _rng("cr", oid).uniform(0.015, 0.06) if oid else 0
+                payout = _rng("payout", oid).choice([8, 12, 15, 20, 25, 30]) if oid else 0
+                conv = sum(1 for _ in range(c) if ro.random() < cr)
+                rows.append({
+                    "campaign_id": campaign_id, "stream_id": s["id"], "offer_id": oid, "day": d.isoformat(),
+                    "clicks": c, "unique": int(c * ro.uniform(0.72, 0.9)), "bots": int(c * ro.uniform(0.01, 0.07)),
+                    "conversions": conv, "revenue": float(conv * payout),
+                })
+    return rows
+
+
+@api.post("/report/build")
+async def build_report(request: Request):
+    body = await request.json()
+    measures = body.get("measures") or body.get("metrics") or ["clicks"]
+    dims = body.get("dimensions") or []
+    campaign_id = None
+    for f in body.get("filters") or []:
+        if f.get("name") == "campaign_id" and f.get("operator") == "EQUALS":
+            campaign_id = int(f["expression"])
+    if campaign_id is None:
+        raise HTTPException(400, {"error": "fake keitaro supports only campaign_id EQUALS filter"})
+    unknown = [m for m in measures if m not in MEASURE_MAP]
+    if unknown:
+        raise HTTPException(400, {"error": f"Unknown measures: {unknown}"})
+
+    groups: dict[tuple, dict] = {}
+    for row in _click_rows(campaign_id, _range_days(body.get("range") or {})):
+        key = tuple(row[d] for d in dims)
+        acc = groups.setdefault(key, {**dict(zip(dims, key)), **{m: 0 for m in measures}})
+        for m in measures:
+            acc[m] += row[MEASURE_MAP[m]]
+    rows = sorted(groups.values(), key=lambda r: tuple(str(r[d]) for d in dims))
+    return {"rows": rows, "total": len(rows), "meta": dims + measures}
 
 
 # Служебное: «пользователь поменял что-то прямо в Keitaro» — для демо и тестов.

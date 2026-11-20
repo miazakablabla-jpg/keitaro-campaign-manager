@@ -3,84 +3,58 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Keitaro campaign manager</title>
+  <title>Keitaro Campaign Manager</title>
   <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/themes/base/jquery-ui.min.css">
-  <link rel="stylesheet" href="/static/app.css">
+  <link rel="stylesheet" href="/static/app.css?v=4">
 </head>
 <body>
-  <header class="top">
-    <span class="logo">Keitaro <small>wrapper</small></span>
-    <nav>
-      <button class="tab active" data-tab="create">Новая кампания</button>
-      <button class="tab" data-tab="editor">Редактор</button>
-    </nav>
-    <span id="conn" class="conn" hidden></span>
-  </header>
+  <div class="app">
+    <header class="topbar">
+      <a class="brand" href="#/new">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>Campaign Manager</span>
+        <span class="brand-sub">для Keitaro</span>
+      </a>
+      <span id="conn" class="conn" hidden></span>
+    </header>
 
-  <main>
-    <div id="toast" class="toast" role="status" hidden></div>
-
-    <!-- Часть 1 -->
-    <section id="tab-create" class="panel">
-      <h1>New campaign</h1>
-      <form id="create-form" class="card form" autocomplete="off" novalidate>
-        <label>Name <input name="name" required placeholder="имя кампании" maxlength="255"></label>
-
-        <div class="field">
-          <span class="label">Geo</span>
-          <div class="chips" id="geo-chips">
-            <input id="geo-input" placeholder="Начните вводить страну или код: Мексика, AU, RO…">
-          </div>
-          <span class="hint">Посетители из этих стран уйдут на <span class="geo-target">google.com</span>, остальные — на оффер. Можно вставить список через запятую.</span>
-        </div>
-
-        <label>Offer
-          <input id="create-offer" placeholder="поиск по офферам: ID или название" required>
-          <input type="hidden" name="offer_id">
-        </label>
-
-        <div class="row3">
-          <label>Домен <select name="domain_id" required></select></label>
-          <label>Группа
-            <span class="with-btn"><select name="group_id" required></select><button type="button" class="link" data-create="groups">Создать</button></span>
-          </label>
-          <label>Источник
-            <span class="with-btn"><select name="traffic_source_id" required></select><button type="button" class="link" data-create="sources">Создать</button></span>
-          </label>
-        </div>
-        <button class="btn primary wide" type="submit">Create</button>
-      </form>
-      <div id="create-result"></div>
-    </section>
-
-    <!-- Часть 2 -->
-    <section id="tab-editor" class="panel" hidden>
-      <div class="toolbar">
-        <select id="campaign-select" aria-label="Кампания"><option value="">Выберите кампанию…</option></select>
-        <button class="btn" id="fetch-btn" disabled>Fetch streams</button>
-        <button class="btn ghost" id="reload-campaigns" title="Обновить список кампаний из Keitaro">↻</button>
+    <aside class="sidebar" aria-label="Кампании">
+      <a class="btn btn-primary btn-block" href="#/new" id="nav-new"></a>
+      <label class="search">
+        <span class="search-icon" aria-hidden="true"></span>
+        <input id="campaign-search" type="search" placeholder="Поиск по названию, ID, алиасу" autocomplete="off">
+      </label>
+      <div class="side-head">
+        <span>Кампании в Keitaro</span>
+        <button class="icon-btn" id="reload-campaigns" type="button" title="Обновить список" aria-label="Обновить список"></button>
       </div>
+      <ul id="campaign-list" class="campaign-list"></ul>
+    </aside>
 
-      <details class="legend">
-        <summary>Как работает редактор</summary>
-        <ul>
-          <li><b>Fetch streams</b> — загрузить потоки из Keitaro. Черновик заменяется тем, что сейчас в трекере.</li>
-          <li><span class="sw sw-dirty"></span> Жёлтый поток — есть правки, которых ещё нет в Keitaro. <b>Push to Keitaro</b> публикует их, <b>Cancel</b> откатывает.</li>
-          <li><span class="badge-add">добавлен</span> — оффер добавлен, но ещё не опубликован. Cancel уберёт его из потока.</li>
-          <li><span class="badge-del">будет удалён</span> — после Push оффер исчезнет из Keitaro, но останется в архиве.</li>
-          <li><span class="badge-gone">removed</span> — в архиве: удалён через обёртку или прямо в Keitaro. <b>Bring back</b> возвращает.</li>
-          <li><b>📌</b> — закрепить вес. Закреплённые проценты не меняются при добавлении и удалении, остальные делят остаток поровну. Число можно поправить прямо в поле.</li>
-        </ul>
-      </details>
+    <main id="view" class="view" tabindex="-1"></main>
+  </div>
 
-      <div id="campaign"></div>
-    </section>
-  </main>
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+
+  <dialog id="dialog" class="dialog">
+    <form method="dialog" class="dialog-body">
+      <h3 class="dialog-title"></h3>
+      <p class="dialog-text"></p>
+      <label class="dialog-field" hidden><span class="field-label"></span><input class="input" name="value" autocomplete="off"></label>
+      <div class="dialog-actions">
+        <button class="btn" value="cancel" type="submit">Отмена</button>
+        <button class="btn btn-primary" value="ok" type="submit">OK</button>
+      </div>
+    </form>
+  </dialog>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/jquery-ui.min.js"></script>
-  <script src="/static/countries.js"></script>
-  <script src="/static/app.js"></script>
+  <script src="/static/countries.js?v=4"></script>
+  <script src="/static/app.js?v=4"></script>
 </body>
 </html>

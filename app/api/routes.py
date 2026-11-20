@@ -10,6 +10,7 @@ from app.schemas import AddOffer, CampaignCreate, CampaignOut, NameIn, PinOffer
 from app.services import editor
 from app.services.creator import CampaignInput, create_campaign
 from app.services.offers import catalog
+from app.services.stats import campaign_stats
 
 router = APIRouter(prefix="/api")
 
@@ -87,6 +88,12 @@ def get_campaign(campaign_id: int, db: Session = Db):
     if campaign is None:
         raise HTTPException(404, "Кампания ещё не загружена. Нажмите Fetch streams")
     return CampaignOut.of(campaign)
+
+
+@router.get("/campaigns/{campaign_id}/stats")
+def stats(campaign_id: int, period: str = Query("today", max_length=16), kt: KeitaroClient = Kt):
+    """Клики, уникальные, боты, конверсии и доход по кампании, потокам, офферам и дням."""
+    return campaign_stats(kt, campaign_id, period)
 
 
 @router.post("/campaigns/{campaign_id}/fetch", response_model=CampaignOut, response_model_by_alias=True)
