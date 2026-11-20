@@ -1,3 +1,5 @@
+from concurrent.futures import ThreadPoolExecutor
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -41,11 +43,13 @@ def meta():
 # --- справочники Keitaro -------------------------------------------------
 @router.get("/refs")
 def refs(kt: KeitaroClient = Kt):
-    """Домены, группы кампаний и источники для формы создания."""
+    """Домены, группы кампаний и источники для формы создания (три запроса к Keitaro параллельно)."""
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        domains, groups, sources = pool.map(lambda f: f(), (kt.list_domains, kt.list_campaign_groups, kt.list_traffic_sources))
     return {
-        "domains": [{"id": d["id"], "name": d["name"]} for d in kt.list_domains() if d.get("state") != "deleted"],
-        "groups": [{"id": g["id"], "name": g["name"]} for g in kt.list_campaign_groups()],
-        "sources": [{"id": s["id"], "name": s["name"]} for s in kt.list_traffic_sources() if s.get("state") != "deleted"],
+        "domains": [{"id": d["id"], "name": d["name"]} for d in domains if d.get("state") != "deleted"],
+        "groups": [{"id": g["id"], "name": g["name"]} for g in groups],
+        "sources": [{"id": s["id"], "name": s["name"]} for s in sources if s.get("state") != "deleted"],
     }
 
 

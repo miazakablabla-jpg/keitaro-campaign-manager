@@ -141,6 +141,13 @@
     });
   }
 
+  // В Keitaro название оффера часто уже начинается с его ID («18813 Flexacil…») — не дублируем.
+  function offerName(id, name) {
+    var p = String(id) + " ";
+    name = String(name || "");
+    return name.indexOf(p) === 0 ? name.slice(p.length) : name;
+  }
+
   function keitaroCampaignLink(id) {
     return S.meta.keitaro_admin_url ? S.meta.keitaro_admin_url + "#!/campaigns/" + id : null;
   }
@@ -158,7 +165,7 @@
         $.getJSON("/api/offers/search", { q: req.term })
           .done(function (rows) {
             if (!rows.length) { res([{ label: "Ничего не найдено", value: "", empty: true }]); return; }
-            res(rows.map(function (o) { return { label: "[" + o.id + "] " + o.name, value: "[" + o.id + "] " + o.name, offer: o }; }));
+            res(rows.map(function (o) { var t = "[" + o.id + "] " + offerName(o.id, o.name); return { label: t, value: t, offer: o }; }));
           })
           .fail(function () { res([{ label: "Не удалось загрузить офферы", value: "", empty: true }]); });
       },
@@ -171,7 +178,7 @@
     $input.autocomplete("instance")._renderItem = function (ul, item) {
       var html = item.empty
         ? '<span class="ac-empty">' + esc(item.label) + "</span>"
-        : '<span class="ac-id">' + item.offer.id + "</span>" + esc(item.offer.name);
+        : '<span class="ac-id">' + item.offer.id + "</span>" + esc(offerName(item.offer.id, item.offer.name));
       return $("<li>").toggleClass("ui-state-disabled", !!item.empty).append($("<div>").html(html)).appendTo(ul);
     };
   }
@@ -368,7 +375,7 @@
     var $slot = $("#offer-slot");
     if (C.offer) {
       $slot.html(
-        '<div class="picked"><span class="offer-id">' + C.offer.id + '</span><span class="offer-name">' + esc(C.offer.name) + "</span>" +
+        '<div class="picked"><span class="offer-id">' + C.offer.id + '</span><span class="offer-name">' + esc(offerName(C.offer.id, C.offer.name)) + "</span>" +
         '<button type="button" class="icon-btn" id="offer-clear" title="Выбрать другой оффер" aria-label="Выбрать другой оффер">' + icon("x") + "</button></div>"
       );
     } else {
@@ -412,7 +419,7 @@
       '<div class="pv-flow"><div class="pv-flow-title"><span class="pos">1</span>Гео → редирект</div>' +
         '<div>' + geo + '</div><div class="muted small">Фильтр «Страна, принимать» · ' + esc(S.meta.geo_redirect_url) + "</div></div>" +
       '<div class="pv-flow"><div class="pv-flow-title"><span class="pos">2</span>Остальной трафик → оффер</div>' +
-        "<div>" + (C.offer ? '<span class="offer-id">' + C.offer.id + "</span> " + esc(C.offer.name) : '<span class="pv-empty">оффер не выбран</span>') + '</div><div class="muted small">Без фильтров · доля 100%</div></div>' +
+        "<div>" + (C.offer ? '<span class="offer-id">' + C.offer.id + "</span> " + esc(offerName(C.offer.id, C.offer.name)) : '<span class="pv-empty">оффер не выбран</span>') + '</div><div class="muted small">Без фильтров · доля 100%</div></div>' +
       '<div class="pv-row"><span class="pv-label">Группа · Источник</span><span>' + none(selText("group_id")) + " · " + none(selText("traffic_source_id")) + "</span></div>"
     );
   }
@@ -655,7 +662,7 @@
         '<div id="banners"></div>' +
         '<section class="card" id="analytics"></section>' +
         '<h2 class="section-title">Потоки <span class="count">' + c.streams.length + "</span></h2>" +
-        '<div id="streams" class="view-inner" style="gap:14px"></div>' +
+        '<div id="streams" class="streams"></div>' +
         '<div id="dirty-bar" class="dirty-bar" role="status" hidden></div>' +
       "</div>"
     );
@@ -878,7 +885,7 @@
       return (
         '<tr class="' + (isLive ? "" : "archived") + '" data-link="' + o.id + '">' +
           '<td><div class="offer-cell"><span class="swatch" style="background:' + (isLive ? color(i) : "var(--line-strong)") + '"></span>' +
-            '<span class="offer-id">' + o.offer_id + '</span><span class="offer-name">' + esc(o.offer_name) + "</span>" + (STATUS[o.status] || "") + "</div></td>" +
+            '<span class="offer-id">' + o.offer_id + '</span><span class="offer-name">' + esc(offerName(o.offer_id, o.offer_name)) + "</span>" + (STATUS[o.status] || "") + "</div></td>" +
           '<td class="r"><div class="share-cell">' + share + lockBtn + "</div>" + (showWas ? '<span class="share-was">в Keitaro ' + o.published_share + "%</span>" : "") + "</td>" +
           statCells(m) +
           '<td class="row-actions">' + action + "</td>" +
@@ -1000,8 +1007,8 @@
       dialog({
         title: "Опубликовать «" + s.name + "» в Keitaro?",
         text: "В потоке останется " + live.length + " " + plural(live.length, "оффер", "оффера", "офферов") + ":\n" +
-          live.map(function (o) { return "• [" + o.offer_id + "] " + o.offer_name + " — " + o.share + "%"; }).join("\n") +
-          (gone.length ? "\n\nБудут убраны:\n" + gone.map(function (o) { return "• [" + o.offer_id + "] " + o.offer_name; }).join("\n") : ""),
+          live.map(function (o) { return "• [" + o.offer_id + "] " + offerName(o.offer_id, o.offer_name) + " — " + o.share + "%"; }).join("\n") +
+          (gone.length ? "\n\nБудут убраны:\n" + gone.map(function (o) { return "• [" + o.offer_id + "] " + offerName(o.offer_id, o.offer_name); }).join("\n") : ""),
         ok: "Опубликовать",
       }).then(function (ok) {
         if (ok) run(api("POST", "/api/streams/" + streamId + "/push"), $b, "Поток опубликован в Keitaro").done(loadStats);
@@ -1034,6 +1041,9 @@
   $.getJSON("/api/meta").always(function (m) {
     if (m && m.geo_redirect_url) S.meta = m;
     setConn();
+    $("#view").html('<div class="view-inner"><div class="card"><div class="card-body loading-note"><span class="spinner"></span>Подключение к Keitaro' +
+      (S.meta.fake_keitaro ? " (эмулятор)" : "") + "…</div></div></div>");
+    $("#campaign-list").html('<li class="list-empty">Загрузка кампаний…</li>');
     // Справочники и список кампаний грузим параллельно; страницу рисуем, когда есть оба.
     $.when(loadRefs(), loadCampaigns()).always(function () {
       if (!location.hash) history.replaceState(null, "", "#/new");

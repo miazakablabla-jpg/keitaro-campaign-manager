@@ -1,5 +1,6 @@
 """Статистика кампании из отчётов Keitaro (POST /report/build)."""
 
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, timedelta
 from typing import Any
 
@@ -89,22 +90,28 @@ def campaign_stats(kt: KeitaroClient, campaign_id: int, period: str, today: date
     interval = INTERVALS[period]
     today = today or date.today()
 
+    # Три отчёта независимы — запрашиваем параллельно.
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        rows_stream, rows_offer, rows_day = pool.map(
+            lambda dims: _report(kt, campaign_id, interval, dims), (["stream_id"], ["stream_id", "offer_id"], ["day"])
+        )
+
     by_stream: dict[int, dict] = {}
     totals = _empty()
-    for row in _report(kt, campaign_id, interval, ["stream_id"]):
+    for row in rows_stream:
         sid = int(_num(row.get("stream_id")))
         m = _metrics(row)
         by_stream[sid] = m
         _add(totals, m)
 
     by_offer: dict[str, dict] = {}
-    for row in _report(kt, campaign_id, interval, ["stream_id", "offer_id"]):
+    for row in rows_offer:
         sid, oid = int(_num(row.get("stream_id"))), int(_num(row.get("offer_id")))
         if oid:
             by_offer[f"{sid}:{oid}"] = _metrics(row)
 
     daily: dict[str, dict] = {}
-    for row in _report(kt, campaign_id, interval, ["day"]):
+    for row in rows_day:
         day = str(row.get("day") or "")[:10]
         if day:
             daily[day] = _metrics(row)

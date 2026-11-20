@@ -2,7 +2,14 @@ import os
 
 # Тесты не должны зависеть от локального .env (настоящий трекер, префикс и т. п.):
 # переменные окружения важнее файла .env.
-os.environ.update(CAMPAIGN_PREFIX="", REPORT_TIMEZONE="", GEO_REDIRECT_URL="https://google.com")
+os.environ.update(
+    KEITARO_URL="http://keitaro.test",
+    KEITARO_API_KEY="fake-key",
+    DATABASE_URL="sqlite://",
+    CAMPAIGN_PREFIX="",
+    REPORT_TIMEZONE="",
+    GEO_REDIRECT_URL="https://google.com",
+)
 
 import pytest
 from fastapi.testclient import TestClient

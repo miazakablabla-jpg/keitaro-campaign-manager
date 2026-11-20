@@ -67,6 +67,11 @@ class KeitaroClient:
     def get_offer(self, offer_id: int) -> dict:
         return self._request("GET", f"offers/{offer_id}")
 
+    def create_offer(self, name: str, url: str) -> dict:
+        """Внешний оффер с HTTP-редиректом на url (нужен для тестовых данных)."""
+        body = {"name": name, "offer_type": "external", "action_type": "http", "action_payload": url, "state": "active"}
+        return self._request("POST", "offers", json=body)
+
     # --- кампании -------------------------------------------------------
     def list_campaigns(self) -> list[dict]:
         return self._request("GET", "campaigns")

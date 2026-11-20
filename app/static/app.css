@@ -359,3 +359,7 @@ table.grid tfoot td { font-weight: 600; background: var(--surface-2); border-bot
 .input-group .addon { display: inline-flex; align-items: center; padding: 0 10px; border: 1px solid var(--line-strong); border-right: 0; border-radius: 6px 0 0 6px; background: var(--surface-3); color: var(--text-2); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; white-space: nowrap; }
 .input-group .input { border-radius: 0 6px 6px 0; min-width: 0; }
 .campaign-list .c-flag:not(.loaded) { color: var(--text-3); }
+
+.streams { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.loading-note { display: flex; align-items: center; gap: 10px; color: var(--text-2); }
+.spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--line-strong); border-top-color: var(--accent); animation: spin .8s linear infinite; }
