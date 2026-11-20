@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Keitaro campaign manager</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/themes/base/jquery-ui.min.css">
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <header class="top">
+    <span class="logo">Keitaro <small>wrapper</small></span>
+    <nav>
+      <button class="tab active" data-tab="create">Новая кампания</button>
+      <button class="tab" data-tab="editor">Редактор</button>
+    </nav>
+  </header>
+
+  <main>
+    <div id="toast" class="toast" hidden></div>
+
+    <!-- Часть 1 -->
+    <section id="tab-create" class="panel">
+      <h1>New campaign</h1>
+      <form id="create-form" class="card form" autocomplete="off">
+        <label>Name <input name="name" required placeholder="имя кампании"></label>
+        <label>Geo <input name="geo" required placeholder="MX,AU,RO,..."></label>
+        <label>Offer
+          <input id="create-offer" placeholder="поиск по офферам: ID или название" required>
+          <input type="hidden" name="offer_id">
+        </label>
+        <div class="row3">
+          <label>Домен <select name="domain_id" required></select></label>
+          <label>Группа
+            <span class="with-btn"><select name="group_id" required></select><button type="button" class="link" data-create="groups">Создать</button></span>
+          </label>
+          <label>Источник
+            <span class="with-btn"><select name="traffic_source_id" required></select><button type="button" class="link" data-create="sources">Создать</button></span>
+          </label>
+        </div>
+        <button class="btn primary wide" type="submit">Create</button>
+      </form>
+      <div id="create-result"></div>
+    </section>
+
+    <!-- Часть 2 -->
+    <section id="tab-editor" class="panel" hidden>
+      <div class="toolbar">
+        <select id="campaign-select"><option value="">Выберите кампанию…</option></select>
+        <button class="btn" id="fetch-btn" disabled>Fetch streams</button>
+        <button class="btn ghost" id="reload-campaigns" title="Обновить список кампаний">↻</button>
+      </div>
+      <div id="campaign"></div>
+    </section>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/jquery-ui.min.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>
