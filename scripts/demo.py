@@ -26,6 +26,8 @@ def main() -> int:
         "KEITARO_API_KEY": "fake-key",
         "FAKE_KEITARO_KEY": "fake-key",
         "DATABASE_URL": "sqlite:///./demo.db",
+        # В эмуляторе нет чужих кампаний — правило префикса не включаем, иначе демо-кампания будет только для чтения.
+        "CAMPAIGN_PREFIX": os.environ.get("DEMO_CAMPAIGN_PREFIX", ""),
     }
     py = sys.executable
 

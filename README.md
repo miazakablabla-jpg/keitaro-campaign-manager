@@ -23,7 +23,7 @@ make demo
 - **эмулятор Keitaro** на :8001 с демо-кампанией из видео (AU → google, 3 оффера);
 - **приложение** на :8000.
 
-Интерфейс откроется на http://127.0.0.1:8000, Swagger на http://127.0.0.1:8000/docs. Ctrl+C останавливает оба процесса.
+Интерфейс откроется на http://127.0.0.1:8000, Swagger на http://127.0.0.1:8000/docs. Ctrl+C останавливает оба процесса. В демо правило префикса выключено: в эмуляторе нет чужих кампаний, и демо-кампанию из видео можно редактировать.
 
 То же самое в Docker:
 
@@ -44,7 +44,7 @@ make run                    # миграции + uvicorn на :8000
 В Docker:
 
 ```bash
-TRACKER_URL=https://tracker.example.com TRACKER_API_KEY=... docker compose up --build
+TRACKER_URL=https://tracker.example.com TRACKER_API_KEY=... TRACKER_CAMPAIGN_PREFIX=test_ivanov_ docker compose up --build
 ```
 
 Здесь имена `TRACKER_*`, а не `KEITARO_*`. Иначе compose подставил бы значения из локального `.env`, в котором адрес указывает на `127.0.0.1`, а внутри контейнера по этому адресу ничего нет.
