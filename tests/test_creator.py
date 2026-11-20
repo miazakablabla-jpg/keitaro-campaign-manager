@@ -51,3 +51,27 @@ def test_create_campaign_validation(client, fake):
     assert client.post("/api/campaigns", json={**base, "geo": "Mexico"}).status_code == 400
     assert client.post("/api/campaigns", json={**base, "offer_id": 999999}).status_code == 400
     assert len(fake.campaigns) == 1  # в трекере осталась только демо-кампания
+
+
+def test_keitaro_down_is_reported_as_gateway_error(client):
+    """Недоступный трекер не должен выглядеть как «оффер не найден»."""
+    import httpx
+
+    from app.config import Settings
+    from app.keitaro import KeitaroClient, get_keitaro
+    from app.main import app
+
+    def refuse(request):
+        raise httpx.ConnectError("Connection refused", request=request)
+
+    down = KeitaroClient(Settings(keitaro_url="http://keitaro.test"), http=httpx.Client(transport=httpx.MockTransport(refuse)))
+    app.dependency_overrides[get_keitaro] = lambda: down
+    body = {"name": "x", "geo": "MX", "offer_id": 3720, "domain_id": 1, "group_id": 1, "traffic_source_id": 1}
+    resp = client.post("/api/campaigns", json=body)
+    assert resp.status_code == 502
+    assert "недоступен" in resp.json()["detail"]
+
+
+def test_meta_does_not_leak_key(client):
+    data = client.get("/api/meta").json()
+    assert data["fake_keitaro"] is True and "fake-key" not in str(data)

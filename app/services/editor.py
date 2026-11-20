@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.keitaro import KeitaroClient
+from app.keitaro import KeitaroClient, KeitaroError
 from app.models import Campaign, Stream, StreamOffer
 from app.services.offers import ensure_offer
 from app.services.weights import Slot, WeightsError, distribute, validate_for_publish
@@ -185,8 +185,10 @@ def add_offer(db: Session, kt: KeitaroClient, stream_id: int, offer_id: int) -> 
 
     try:
         kt.get_offer(offer_id)
-    except Exception as exc:  # noqa: BLE001 — нам важно только «есть ли такой оффер»
-        raise EditorError(f"Оффер {offer_id} не найден в Keitaro") from exc
+    except KeitaroError as exc:
+        if exc.status_code == 404:
+            raise EditorError(f"Оффер {offer_id} не найден в Keitaro") from exc
+        raise
     offer = ensure_offer(db, kt, offer_id)
     stream.offer_links.append(StreamOffer(offer=offer, active=True, published_active=False, is_new=True, share=0))
     return _commit_recalc(db, stream)

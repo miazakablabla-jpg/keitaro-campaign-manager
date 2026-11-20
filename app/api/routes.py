@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.config import get_settings
 from app.db import get_db
 from app.keitaro import KeitaroClient, get_keitaro
 from app.models import Campaign
@@ -20,6 +21,19 @@ def _campaign_out(db: Session, stream_id: int, warnings: list[str] | None = None
     stream = editor.get_stream(db, stream_id)
     db.refresh(stream.campaign)
     return CampaignOut.of(stream.campaign, warnings)
+
+
+@router.get("/meta")
+def meta():
+    """Что нужно фронту знать о подключении (ключ наружу не отдаём)."""
+    s = get_settings()
+    fake = s.keitaro_api_key == "fake-key"
+    base = s.keitaro_url.rstrip("/").removesuffix("/admin_api/v1")
+    return {
+        "fake_keitaro": fake,
+        "keitaro_admin_url": None if fake else f"{base}/admin/",
+        "geo_redirect_url": s.geo_redirect_url,
+    }
 
 
 # --- справочники Keitaro -------------------------------------------------

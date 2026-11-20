@@ -13,39 +13,62 @@
 
 ## Быстрый старт
 
-Нужен Python 3.11 или новее.
+### Демо без ключа: одна команда
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+make demo
+```
 
-cp .env.example .env        # впишите KEITARO_URL и KEITARO_API_KEY
-alembic upgrade head        # создаст таблицы (SQLite по умолчанию)
+Команда создаёт `.venv`, ставит зависимости, применяет миграции к отдельной `demo.db` и запускает два процесса:
+- **эмулятор Keitaro** на :8001 с демо-кампанией из видео (AU → google, 3 оффера);
+- **приложение** на :8000.
+
+Интерфейс откроется на http://127.0.0.1:8000, Swagger на http://127.0.0.1:8000/docs. Ctrl+C останавливает оба процесса.
+
+То же самое в Docker:
+
+```bash
+docker compose up --build
+```
+
+### С настоящим Keitaro
+
+```bash
+make install                # .venv + зависимости, .env из .env.example
+# впишите в .env KEITARO_URL (адрес трекера) и KEITARO_API_KEY («Профиль → API ключи»)
+make run                    # миграции + uvicorn на :8000
+```
+
+В Docker:
+
+```bash
+TRACKER_URL=https://tracker.example.com TRACKER_API_KEY=... docker compose up --build
+```
+
+Здесь имена `TRACKER_*`, а не `KEITARO_*`. Иначе compose подставил бы значения из локального `.env`, в котором адрес указывает на `127.0.0.1`, а внутри контейнера по этому адресу ничего нет.
+
+Без `make`:
+
+```bash
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+alembic upgrade head
+uvicorn fake_keitaro.app:app --port 8001 &   # только если работаете с эмулятором
 uvicorn app.main:app --reload --port 8000
 ```
 
-Интерфейс открывается на http://localhost:8000, Swagger на http://localhost:8000/docs.
+Нужен Python 3.11 или новее, проверено на 3.12 и 3.14.
 
 ### Настройки (`.env`)
 
 | Переменная | По умолчанию | Что это |
 |---|---|---|
-| `KEITARO_URL` | `http://127.0.0.1:8001` | Адрес трекера, можно без `/admin_api/v1` |
+| `KEITARO_URL` | `http://127.0.0.1:8001` (эмулятор) | Адрес трекера, можно без `/admin_api/v1` |
 | `KEITARO_API_KEY` | `fake-key` | Ключ из «Профиль → API ключи» |
 | `DATABASE_URL` | `sqlite:///./keitaro_manager.db` | Любой URL SQLAlchemy, например Postgres: `postgresql+psycopg://…` (нужно доустановить `psycopg[binary]`) |
 | `GEO_REDIRECT_URL` | `https://google.com` | Куда первый поток отправляет посетителей из выбранного гео |
 | `OFFERS_CACHE_TTL` | `60` | Сколько секунд кэшируется список офферов для автокомплита |
-
-### Запуск без настоящего Keitaro
-
-```bash
-# терминал 1: эмулятор Admin API с демо-кампанией из видео (AU → google, 3 оффера)
-uvicorn fake_keitaro.app:app --port 8001
-
-# терминал 2: приложение (KEITARO_URL=http://127.0.0.1:8001, KEITARO_API_KEY=fake-key)
-uvicorn app.main:app --reload --port 8000
-```
 
 Удаление офферов прямо в Keitaro можно сымитировать служебной ручкой эмулятора:
 
@@ -68,12 +91,22 @@ URL базы Alembic берёт из `DATABASE_URL`, см. `alembic/env.py`.
 ### Тесты
 
 ```bash
-pytest -q
+make test        # или: pytest -q
 ```
 
 Тесты гоняют весь сценарий из видео через HTTP API приложения. Вместо Keitaro подставлен эмулятор, сеть не нужна.
 
 ---
+
+## Интерфейс
+
+- **Создание кампании.** Страны выбираются из списка с подсказками: можно искать по названию на русском или по коду, вставить готовый список `MX, AU, RO`, а Backspace убирает последнюю страну. Оффер ищется по ID или названию. Группу и источник можно создать прямо из формы. После создания показывается, какие потоки получились, ссылка на кампанию с кнопкой «Копировать» и кнопки «Открыть в редакторе» и «Открыть в Keitaro».
+- **Редактор.**
+  - Пока запрос не вернулся, кнопки заблокированы, поэтому двойной клик не добавит оффер дважды.
+  - Если в кампании есть неопубликованные потоки, сверху показывается плашка.
+  - Приложение спрашивает подтверждение, если с неопубликованными правками переключиться на другую кампанию, нажать Fetch (он заменит черновик) или закрыть вкладку.
+  - Push неактивен, пока сумма весов не равна 100%, и интерфейс объясняет почему.
+  - В блоке «Как работает редактор» описаны статусы и закрепление веса.
 
 ## Как работает редактор
 
@@ -142,16 +175,19 @@ app/
     editor.py         часть 2: Fetch / Add / Remove / Bring back / Pin / Cancel / Push
     weights.py        пересчёт весов
     offers.py         кэш и поиск офферов, локальный справочник
-  static/             index.html + app.js (jQuery) + app.css
+  static/             index.html + app.js (jQuery) + app.css + countries.js
 alembic/              миграции
 fake_keitaro/app.py   эмулятор Keitaro Admin API
+scripts/demo.py       make demo: эмулятор + приложение одной командой
 tests/                pytest
+Makefile, Dockerfile, docker-compose.yml
 ```
 
 ## API
 
 | Метод | Путь | Что делает |
 |---|---|---|
+| GET | `/api/meta` | эмулятор или настоящий трекер, ссылка на админку (ключ не отдаётся) |
 | GET | `/api/refs` | домены, группы кампаний, источники |
 | POST | `/api/refs/groups`, `/api/refs/sources` | создать группу или источник `{name}` |
 | GET | `/api/offers/search?q=` | автокомплит офферов |

@@ -15,21 +15,31 @@
       <button class="tab active" data-tab="create">Новая кампания</button>
       <button class="tab" data-tab="editor">Редактор</button>
     </nav>
+    <span id="conn" class="conn" hidden></span>
   </header>
 
   <main>
-    <div id="toast" class="toast" hidden></div>
+    <div id="toast" class="toast" role="status" hidden></div>
 
     <!-- Часть 1 -->
     <section id="tab-create" class="panel">
       <h1>New campaign</h1>
-      <form id="create-form" class="card form" autocomplete="off">
-        <label>Name <input name="name" required placeholder="имя кампании"></label>
-        <label>Geo <input name="geo" required placeholder="MX,AU,RO,..."></label>
+      <form id="create-form" class="card form" autocomplete="off" novalidate>
+        <label>Name <input name="name" required placeholder="имя кампании" maxlength="255"></label>
+
+        <div class="field">
+          <span class="label">Geo</span>
+          <div class="chips" id="geo-chips">
+            <input id="geo-input" placeholder="Начните вводить страну или код: Мексика, AU, RO…">
+          </div>
+          <span class="hint">Посетители из этих стран уйдут на <span class="geo-target">google.com</span>, остальные — на оффер. Можно вставить список через запятую.</span>
+        </div>
+
         <label>Offer
           <input id="create-offer" placeholder="поиск по офферам: ID или название" required>
           <input type="hidden" name="offer_id">
         </label>
+
         <div class="row3">
           <label>Домен <select name="domain_id" required></select></label>
           <label>Группа
@@ -47,16 +57,30 @@
     <!-- Часть 2 -->
     <section id="tab-editor" class="panel" hidden>
       <div class="toolbar">
-        <select id="campaign-select"><option value="">Выберите кампанию…</option></select>
+        <select id="campaign-select" aria-label="Кампания"><option value="">Выберите кампанию…</option></select>
         <button class="btn" id="fetch-btn" disabled>Fetch streams</button>
-        <button class="btn ghost" id="reload-campaigns" title="Обновить список кампаний">↻</button>
+        <button class="btn ghost" id="reload-campaigns" title="Обновить список кампаний из Keitaro">↻</button>
       </div>
+
+      <details class="legend">
+        <summary>Как работает редактор</summary>
+        <ul>
+          <li><b>Fetch streams</b> — загрузить потоки из Keitaro. Черновик заменяется тем, что сейчас в трекере.</li>
+          <li><span class="sw sw-dirty"></span> Жёлтый поток — есть правки, которых ещё нет в Keitaro. <b>Push to Keitaro</b> публикует их, <b>Cancel</b> откатывает.</li>
+          <li><span class="badge-add">добавлен</span> — оффер добавлен, но ещё не опубликован. Cancel уберёт его из потока.</li>
+          <li><span class="badge-del">будет удалён</span> — после Push оффер исчезнет из Keitaro, но останется в архиве.</li>
+          <li><span class="badge-gone">removed</span> — в архиве: удалён через обёртку или прямо в Keitaro. <b>Bring back</b> возвращает.</li>
+          <li><b>📌</b> — закрепить вес. Закреплённые проценты не меняются при добавлении и удалении, остальные делят остаток поровну. Число можно поправить прямо в поле.</li>
+        </ul>
+      </details>
+
       <div id="campaign"></div>
     </section>
   </main>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/jquery-ui.min.js"></script>
+  <script src="/static/countries.js"></script>
   <script src="/static/app.js"></script>
 </body>
 </html>

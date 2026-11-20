@@ -84,7 +84,9 @@ def create_campaign(db: Session, kt: KeitaroClient, data: CampaignInput) -> Camp
     try:
         offer = kt.get_offer(data.offer_id)
     except KeitaroError as exc:
-        raise EditorError(f"Оффер {data.offer_id} не найден в Keitaro") from exc
+        if exc.status_code == 404:
+            raise EditorError(f"Оффер {data.offer_id} не найден в Keitaro") from exc
+        raise
 
     kc = kt.create_campaign(
         {

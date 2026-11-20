@@ -1,0 +1,28 @@
+# docker compose up --build             → демо с эмулятором Keitaro
+# TRACKER_URL=https://tracker.example.com TRACKER_API_KEY=... docker compose up --build
+#                                        → то же приложение против настоящего трекера
+# (отдельные имена, чтобы compose не подхватил KEITARO_URL из локального .env)
+services:
+  fake-keitaro:
+    build: .
+    command: uvicorn fake_keitaro.app:app --host 0.0.0.0 --port 8001
+    environment:
+      FAKE_KEITARO_KEY: fake-key
+    ports:
+      - "8001:8001"
+
+  app:
+    build: .
+    depends_on:
+      - fake-keitaro
+    environment:
+      KEITARO_URL: ${TRACKER_URL:-http://fake-keitaro:8001}
+      KEITARO_API_KEY: ${TRACKER_API_KEY:-fake-key}
+      DATABASE_URL: sqlite:////data/keitaro_manager.db
+    volumes:
+      - app-data:/data
+    ports:
+      - "8000:8000"
+
+volumes:
+  app-data:
