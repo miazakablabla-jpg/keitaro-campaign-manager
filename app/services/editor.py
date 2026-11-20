@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.config import get_settings
 from app.keitaro import KeitaroClient, KeitaroError
 from app.models import Campaign, Stream, StreamOffer
 from app.services.offers import ensure_offer
@@ -27,6 +28,24 @@ class EditorError(ValueError):
 
 class NotFound(LookupError):
     pass
+
+
+class Forbidden(PermissionError):
+    pass
+
+
+def is_editable(campaign: Campaign) -> bool:
+    prefix = get_settings().campaign_prefix
+    return not prefix or campaign.name.startswith(prefix)
+
+
+def ensure_editable(campaign: Campaign) -> None:
+    if not is_editable(campaign):
+        prefix = get_settings().campaign_prefix
+        raise Forbidden(
+            f"Кампания «{campaign.name}» чужая: редактировать можно только кампании с префиксом «{prefix}». "
+            "Просмотр и статистика доступны"
+        )
 
 
 def _now() -> datetime:
@@ -143,6 +162,7 @@ def get_stream(db: Session, stream_id: int) -> Stream:
     stream = db.get(Stream, stream_id)
     if stream is None:
         raise NotFound(f"Поток {stream_id} не найден. Нажмите Fetch streams")
+    ensure_editable(stream.campaign)
     return stream
 
 
@@ -150,6 +170,7 @@ def get_link(db: Session, link_id: int) -> StreamOffer:
     link = db.get(StreamOffer, link_id)
     if link is None:
         raise NotFound(f"Привязка оффера {link_id} не найдена")
+    ensure_editable(link.stream.campaign)
     return link
 
 

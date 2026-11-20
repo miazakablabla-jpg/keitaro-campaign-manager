@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import router
 from app.keitaro import KeitaroError
-from app.services.editor import EditorError, NotFound
+from app.services.editor import EditorError, Forbidden, NotFound
 from app.services.stats import StatsError
 from app.services.weights import WeightsError
 
@@ -27,6 +27,11 @@ def index():
 @app.exception_handler(StatsError)
 def _bad_request(_: Request, exc: Exception):
     return JSONResponse(status_code=400, content={"detail": str(exc)})
+
+
+@app.exception_handler(Forbidden)
+def _forbidden(_: Request, exc: Forbidden):
+    return JSONResponse(status_code=403, content={"detail": str(exc)})
 
 
 @app.exception_handler(NotFound)

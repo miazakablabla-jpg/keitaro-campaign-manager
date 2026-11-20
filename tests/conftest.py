@@ -1,16 +1,35 @@
+import os
+
+# Тесты не должны зависеть от локального .env (настоящий трекер, префикс и т. п.):
+# переменные окружения важнее файла .env.
+os.environ.update(CAMPAIGN_PREFIX="", REPORT_TIMEZONE="", GEO_REDIRECT_URL="https://google.com")
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from app.config import Settings
+from app.config import Settings, get_settings
 from app.db import Base, get_db
 from app.keitaro import KeitaroClient, get_keitaro
 from app.main import app
 from app.services.offers import catalog
 from fake_keitaro.app import app as fake_app
 from fake_keitaro.app import store
+
+
+get_settings.cache_clear()
+
+
+@pytest.fixture()
+def prefix():
+    """Включает правило именования test_me_ на время теста."""
+    os.environ["CAMPAIGN_PREFIX"] = "test_me_"
+    get_settings.cache_clear()
+    yield "test_me_"
+    os.environ["CAMPAIGN_PREFIX"] = ""
+    get_settings.cache_clear()
 
 
 @pytest.fixture()

@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from pydantic import BaseModel, Field
 
 from app.models import Campaign, Stream, StreamOffer
+from app.services.editor import is_editable
 
 
 class CampaignCreate(BaseModel):
@@ -86,6 +87,7 @@ class CampaignOut(BaseModel):
     traffic_source_id: int | None
     synced_at: datetime | None
     streams: list[StreamOut]
+    editable: bool = True
     warnings: list[str] = []
 
     @classmethod
@@ -101,6 +103,7 @@ class CampaignOut(BaseModel):
             # SQLite не хранит часовой пояс; в базу всегда пишем UTC.
             synced_at=c.synced_at.replace(tzinfo=timezone.utc) if c.synced_at and not c.synced_at.tzinfo else c.synced_at,
             streams=[StreamOut.of(s) for s in c.streams],
+            editable=is_editable(c),
             warnings=warnings or [],
         )
 

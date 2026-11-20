@@ -44,6 +44,17 @@ def parse_geo(raw: str | list[str]) -> list[str]:
     return codes
 
 
+def apply_prefix(raw: str) -> str:
+    """«campaign1» → «test_ivanov_campaign1», если в настройках задан префикс."""
+    name = raw.strip()
+    prefix = get_settings().campaign_prefix
+    if prefix and not name.startswith(prefix):
+        name = prefix + name
+    if not name or name == prefix:
+        raise EditorError("Укажите название кампании")
+    return name
+
+
 def random_alias(length: int = 6) -> str:
     return "".join(secrets.choice(_ALIAS_ALPHABET) for _ in range(length))
 
@@ -76,9 +87,7 @@ def offers_stream_body(campaign_id: int, offer_id: int) -> dict:
 
 
 def create_campaign(db: Session, kt: KeitaroClient, data: CampaignInput) -> Campaign:
-    name = data.name.strip()
-    if not name:
-        raise EditorError("Укажите название кампании")
+    name = apply_prefix(data.name)
     geo = parse_geo(data.geo)
 
     try:

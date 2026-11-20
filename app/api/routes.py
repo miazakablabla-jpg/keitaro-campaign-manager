@@ -34,6 +34,7 @@ def meta():
         "fake_keitaro": fake,
         "keitaro_admin_url": None if fake else f"{base}/admin/",
         "geo_redirect_url": s.geo_redirect_url,
+        "campaign_prefix": s.campaign_prefix,
     }
 
 
@@ -79,7 +80,17 @@ def keitaro_campaigns(db: Session = Db, kt: KeitaroClient = Kt):
     known = set(db.scalars(select(Campaign.id)))
     rows = [c for c in kt.list_campaigns() if c.get("state") != "deleted"]
     rows.sort(key=lambda c: c["id"], reverse=True)
-    return [{"id": c["id"], "name": c["name"], "alias": c.get("alias"), "imported": c["id"] in known} for c in rows]
+    prefix = get_settings().campaign_prefix
+    return [
+        {
+            "id": c["id"],
+            "name": c["name"],
+            "alias": c.get("alias"),
+            "imported": c["id"] in known,
+            "mine": not prefix or str(c["name"]).startswith(prefix),
+        }
+        for c in rows
+    ]
 
 
 @router.get("/campaigns/{campaign_id}", response_model=CampaignOut, response_model_by_alias=True)

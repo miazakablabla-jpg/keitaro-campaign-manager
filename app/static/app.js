@@ -16,6 +16,7 @@
     statsLoading: false,
     statsError: null,
     period: store("period") || "7d",
+    scope: store("scope") || "mine",   // mine | all — фильтр списка кампаний
     busy: false,
   };
 
@@ -187,7 +188,15 @@
   function renderSidebar() {
     var q = $.trim($("#campaign-search").val()).toLowerCase();
     var route = parseHash();
+    var prefix = S.meta.campaign_prefix;
+    var mineOnly = prefix && S.scope === "mine";
+    var mineCount = S.campaigns.filter(function (c) { return c.mine; }).length;
+    $("#scope").prop("hidden", !prefix).find("button").each(function () {
+      var v = $(this).data("scope");
+      $(this).toggleClass("active", v === S.scope).text(v === "mine" ? "Мои · " + mineCount : "Все · " + S.campaigns.length);
+    });
     var rows = S.campaigns.filter(function (c) {
+      if (mineOnly && !c.mine) return false;
       return !q || String(c.id) === q || c.name.toLowerCase().indexOf(q) !== -1 || String(c.alias || "").toLowerCase().indexOf(q) !== -1;
     });
     var $list = $("#campaign-list").empty();
@@ -196,7 +205,7 @@
       return;
     }
     if (!rows.length) {
-      $list.append('<li class="list-empty">' + (q ? "Ничего не найдено" : "В трекере пока нет кампаний") + "</li>");
+      $list.append('<li class="list-empty">' + (q ? "Ничего не найдено" : mineOnly ? "Своих кампаний пока нет. Создайте первую — название начнётся с «" + esc(prefix) + "»." : "В трекере пока нет кампаний") + "</li>");
       return;
     }
     rows.forEach(function (c) {
@@ -204,7 +213,7 @@
       $list.append(
         '<li><a href="#/campaign/' + c.id + '" class="' + (active ? "active" : "") + '">' +
           '<span class="c-name" title="' + esc(c.name) + '">' + esc(c.name) + "</span>" +
-          '<span class="c-flag ' + (c.imported ? "loaded" : "") + '">' + (c.imported ? "загружена" : "") + "</span>" +
+          '<span class="c-flag ' + (c.imported ? "loaded" : "") + '">' + (!c.mine ? "чужая" : c.imported ? "загружена" : "") + "</span>" +
           '<span class="c-meta">#' + c.id + (c.alias ? " · " + esc(c.alias) : "") + "</span>" +
         "</a></li>"
       );
@@ -220,6 +229,11 @@
   }
 
   $("#campaign-search").on("input", renderSidebar);
+  $("#scope").on("click", "button", function () {
+    S.scope = $(this).data("scope");
+    store("scope", S.scope);
+    renderSidebar();
+  });
   $("#reload-campaigns").on("click", function () {
     var $b = $(this).prop("disabled", true);
     loadCampaigns().done(function () { toast("Список кампаний обновлён"); }).always(function () { $b.prop("disabled", false); });
@@ -294,7 +308,10 @@
           '<form id="create-form" class="card" novalidate autocomplete="off">' +
             '<div class="form-section"><h2>Основное</h2>' +
               '<label class="field"><span class="field-label">Название</span>' +
-                '<input class="input" name="name" maxlength="255" placeholder="Например, RO beauty — ноябрь">' +
+                (S.meta.campaign_prefix
+                  ? '<span class="input-group"><span class="addon" title="Обязательный префикс по правилам теста">' + esc(S.meta.campaign_prefix) + '</span><input class="input" name="name" maxlength="240" placeholder="campaign1"></span>'
+                  : '<input class="input" name="name" maxlength="255" placeholder="Например, RO beauty — ноябрь">') +
+                (S.meta.campaign_prefix ? '<span class="field-hint">Префикс подставится сам — так требуют правила тестового трекера.</span>' : "") +
                 '<span class="field-error" data-err="name" hidden></span></label>' +
             "</div>" +
             '<div class="form-section"><h2>Таргетинг</h2>' +
@@ -322,6 +339,7 @@
     );
     renderOfferSlot();
     bindGeo();
+    restoreRefs();
     renderPreview();
     if (!S.refsLoaded) loadRefs().done(function () { if (parseHash().name === "new") refillRefs(); });
   }
@@ -331,8 +349,20 @@
     $f.find("[name=domain_id]").html(optionList(S.refs.domains));
     $f.find("[name=group_id]").html(optionList(S.refs.groups));
     $f.find("[name=traffic_source_id]").html(optionList(S.refs.sources));
+    restoreRefs();
     renderPreview();
   }
+
+  // Последние выбранные домен, группа и источник подставляются по умолчанию.
+  var REF_FIELDS = ["domain_id", "group_id", "traffic_source_id"];
+  function restoreRefs() {
+    REF_FIELDS.forEach(function (f) {
+      var v = store("ref." + f);
+      var $sel = $("#create-form [name=" + f + "]");
+      if (v && $sel.find('option[value="' + v + '"]').length) $sel.val(v);
+    });
+  }
+  $("#view").on("change", "#create-form select", function () { store("ref." + this.name, this.value); });
 
   function renderOfferSlot() {
     var $slot = $("#offer-slot");
@@ -362,8 +392,15 @@
     return $o.val() ? $o.text() : "";
   }
 
+  function fullName(raw) {
+    var p = S.meta.campaign_prefix || "";
+    raw = $.trim(raw || "");
+    if (!raw) return "";
+    return p && raw.indexOf(p) !== 0 ? p + raw : raw;
+  }
+
   function renderPreview() {
-    var name = $.trim($("#create-form [name=name]").val());
+    var name = fullName($("#create-form [name=name]").val());
     var domain = selText("domain_id");
     var geo = C.geo.length
       ? C.geo.map(function (c) { var x = window.COUNTRY_BY_CODE[c]; return esc(c) + (x && x.name !== c ? ' <span class="muted">' + esc(x.name) + "</span>" : ""); }).join(", ")
@@ -476,7 +513,12 @@
   }
 
   $("#view").on("input change", "#create-form [name]", renderPreview);
-  $("#view").on("input", "#create-form [name=name]", function () { fieldError("name", ""); });
+  $("#view").on("input", "#create-form [name=name]", function () {
+    // если префикс вставили вручную — убираем, он уже стоит слева
+    var p = S.meta.campaign_prefix;
+    if (p && this.value.indexOf(p) === 0) this.value = this.value.slice(p.length);
+    fieldError("name", "");
+  });
   $("#view").on("click", "#offer-clear", function () { C.offer = null; renderOfferSlot(); renderPreview(); $("#create-offer").trigger("focus"); });
   $("#view").on("reset", "#create-form", function () {
     setTimeout(function () {
@@ -633,6 +675,10 @@
         '<button class="btn btn-sm" data-act="goto-dirty" data-stream-id="' + dirty[0].id + '">К потоку</button>'
       : "");
     var html = "";
+    if (!c.editable) {
+      html += '<div class="banner banner-info">' + icon("lock") + "<span>Чужая кампания: только просмотр и статистика. Редактировать можно кампании с префиксом «" +
+        esc(S.meta.campaign_prefix) + "» — правило тестового трекера, чтобы не сломать кампании других участников.</span></div>";
+    }
     (c.warnings || []).forEach(function (w) { html += '<div class="banner banner-error">' + icon("alert") + "<span>" + esc(w) + "</span></div>"; });
     $("#banners").html(html).toggle(!!html);
   }
@@ -771,6 +817,7 @@
     if (!$s.length || !S.campaign) return;
     if (!S.campaign.streams.length) { $s.html('<div class="card empty-state"><h2>В кампании нет потоков</h2></div>'); return; }
     $s.html(S.campaign.streams.map(renderStream).join(""));
+    if (!S.campaign.editable) $s.find(".stream-actions, .add-row, .row-actions button, .share-cell .icon-btn").remove();
     $s.find(".add-offer").each(function () {
       var $inp = $(this);
       offerAutocomplete($inp, function (offer) { $inp.data("offerId", offer.id); });

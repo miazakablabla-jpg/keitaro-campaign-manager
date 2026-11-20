@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/themes/base/jquery-ui.min.css">
-  <link rel="stylesheet" href="/static/app.css?v=4">
+  <link rel="stylesheet" href="/static/app.css?v=5">
 </head>
 <body>
   <div class="app">
@@ -28,6 +28,9 @@
         <span class="search-icon" aria-hidden="true"></span>
         <input id="campaign-search" type="search" placeholder="Поиск по названию, ID, алиасу" autocomplete="off">
       </label>
+      <div class="segmented scope" id="scope" role="group" aria-label="Какие кампании показывать" hidden>
+        <button type="button" data-scope="mine">Мои</button><button type="button" data-scope="all">Все</button>
+      </div>
       <div class="side-head">
         <span>Кампании в Keitaro</span>
         <button class="icon-btn" id="reload-campaigns" type="button" title="Обновить список" aria-label="Обновить список"></button>
@@ -54,7 +57,7 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/jquery-ui.min.js"></script>
-  <script src="/static/countries.js?v=4"></script>
-  <script src="/static/app.js?v=4"></script>
+  <script src="/static/countries.js?v=5"></script>
+  <script src="/static/app.js?v=5"></script>
 </body>
 </html>
