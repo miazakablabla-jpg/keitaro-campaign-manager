@@ -171,6 +171,8 @@
       },
       select: function (e, ui) {
         if (!ui.item.offer) { e.preventDefault(); return; }
+        // Enter, которым выбрали подсказку, не должен сразу запускать «Добавить»
+        $(this).data("acSelectedAt", Date.now());
         onSelect(ui.item.offer);
       },
       focus: function (e, ui) { if (!ui.item.offer) e.preventDefault(); },
@@ -1026,7 +1028,8 @@
   });
   $("#view").on("keydown", ".share-input", function (e) { if (e.key === "Enter") { e.preventDefault(); $(this).trigger("blur"); } });
   $("#view").on("keydown", ".add-offer", function (e) {
-    if (e.key === "Enter" && !$(this).autocomplete("widget").is(":visible")) {
+    var justPicked = Date.now() - ($(this).data("acSelectedAt") || 0) < 300;
+    if (e.key === "Enter" && !justPicked && !$(this).autocomplete("widget").is(":visible")) {
       $(this).closest(".add-row").find('[data-act="add"]').trigger("click");
     }
   });
