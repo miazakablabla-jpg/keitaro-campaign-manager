@@ -9,6 +9,20 @@
 
 В комплекте есть **эмулятор Keitaro** (`fake_keitaro/`). С ним проект запускается и тестируется без настоящего трекера и ключа.
 
+## Скриншоты
+
+Кадры 1–13 сняты в демо-режиме на эмуляторе: в тестовом трекере доступен только один оффер (подробнее в разделе «Проверено на тестовом трекере»). Кадр 14 снят на настоящем трекере.
+
+| | |
+|---|---|
+| ![Создание кампании](docs/screenshots/01-create-campaign.png) **1. Создание кампании:** префикс подставляется сам, справа видно, что будет создано | ![Созданная кампания](docs/screenshots/02-created-campaign.png) **2. Созданная кампания:** два потока по ТЗ |
+| ![Статистика](docs/screenshots/03-campaign-stats.png) **3. Статистика из `/report/build`:** плитки и клики по дням | ![Потоки](docs/screenshots/04-streams-and-offers.png) **4. Потоки:** гео-поток не разбирается, у офферов своя статистика |
+| ![Добавлен оффер](docs/screenshots/05-add-offer-unpublished.png) **5. Добавлен оффер:** 25% × 4, поток не опубликован | ![Фиксация и удаление](docs/screenshots/06-pin-and-remove.png) **6. Доля 25% зафиксирована, один оффер убран:** остальные 38/37 |
+| ![Подтверждение публикации](docs/screenshots/07-publish-confirmation.png) **7. Подтверждение публикации** | ![Опубликовано](docs/screenshots/08-published.png) **8. После публикации** |
+| ![Архив](docs/screenshots/09-deleted-in-keitaro-archived.png) **9. Офферы удалили в Keitaro:** после загрузки они «В архиве» | ![Вернуть](docs/screenshots/10-bring-back.png) **10. «Вернуть»** |
+| ![Тёмная тема](docs/screenshots/11-dark-theme.png) **11. Тёмная тема** | ![Чужая кампания](docs/screenshots/13-foreign-campaign-read-only.png) **13. Чужая кампания: только просмотр** |
+| ![Телефон](docs/screenshots/12-mobile.png) **12. Телефон** | ![Настоящий трекер](docs/screenshots/14-real-keitaro-tlgk-host.jpg) **14. `test_yesbolat_demo` на tlgk.host** |
+
 ---
 
 ## Быстрый старт
